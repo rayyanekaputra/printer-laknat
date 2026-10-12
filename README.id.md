@@ -39,7 +39,7 @@ by IT Indoguna Makassar with Sonnet 5.5
 
 ## cara pakai
 
-1. salin `PrinterFix.bat` ke pc yang bermasalah
+1. salin `printer-laknat.bat` ke pc yang bermasalah
 2. klik kanan file lalu pilih **run as administrator**
 3. pilih opsi dari menu dan ikuti petunjuknya
 
@@ -57,7 +57,7 @@ by IT Indoguna Makassar with Sonnet 5.5
 | 8 | simpan kredensial jaringan untuk sebuah host di credential manager |
 | 9 | diagnostik: status spooler, nilai registry, profil jaringan, printer, kredensial, tes port 445 |
 | A | jalankan perbaikan umum (1 sampai 4) sekaligus |
-| R | kembalikan pengaturan. jika ada folder `PrinterFix.backup` di samping script, pengaturan persis sebelum perbaikan pertama bisa dikembalikan. selain itu, atau jika dipilih, kembalikan ke default Windows: hapus perubahan registry dari 1, 5 dan 6, matikan aturan firewall sharing dan discovery, kembalikan jaringan ke public, reset tipe startup service, dan opsional hapus printer dari 7 serta kredensial dari 8 |
+| R | kembalikan pengaturan. jika ada folder `printer-laknat.backup` di samping script, pengaturan persis sebelum perbaikan pertama bisa dikembalikan. selain itu, atau jika dipilih, kembalikan ke default Windows: hapus perubahan registry dari 1, 5 dan 6, matikan aturan firewall sharing dan discovery, kembalikan jaringan ke public, reset tipe startup service, dan opsional hapus printer dari 7 serta kredensial dari 8 |
 | 0 | keluar |
 
 ## catatan

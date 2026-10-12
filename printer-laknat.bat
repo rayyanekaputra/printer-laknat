@@ -1,10 +1,10 @@
 @echo off
 REM ==========================================================
-REM  Printer Sharing Fix Toolkit
+REM  Printer Laknat
 REM  by IT Indoguna Makassar with Sonnet 5.5
 REM ==========================================================
 setlocal EnableExtensions
-title Printer Sharing Fix Toolkit
+title Printer Laknat
 color 0B
 
 :: ---------- Admin check ----------
@@ -20,7 +20,7 @@ if %errorlevel% neq 0 (
 
 :: Backup of the original settings, saved next to this script
 :: (not %CD%: "Run as administrator" starts in C:\Windows\System32)
-set "BK=%~dp0PrinterFix.backup"
+set "BK=%~dp0printer-laknat.backup"
 
 :menu
 cls
@@ -32,7 +32,7 @@ echo   #     #  #   #  #  ##   #   #     #  #     #     #   # #  #  #  ## #   # 
 echo   #     #   # ### #   #   #   ##### #   #    ##### #   # #   # #   # #   #   #
 echo.
 echo ==========================================================
-echo   PRINTER SHARING FIX TOOLKIT  (Windows 10 / 11)
+echo   PRINTER LAKNAT  (Windows 10 / 11)
 echo   by IT Indoguna Makassar with Sonnet 5.5
 echo ==========================================================
 echo.

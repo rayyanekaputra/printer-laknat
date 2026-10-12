@@ -39,7 +39,7 @@ by IT Indoguna Makassar with Sonnet 5.5
 
 ## how to use
 
-1. copy `PrinterFix.bat` to the affected pc
+1. copy `printer-laknat.bat` to the affected pc
 2. right-click the file and choose **run as administrator**
 3. pick an option from the menu and follow the prompts
 
@@ -57,7 +57,7 @@ by IT Indoguna Makassar with Sonnet 5.5
 | 8 | store network credentials for a host in credential manager |
 | 9 | diagnostics: spooler state, registry value, network profile, printers, credentials, port 445 test |
 | A | run the common fixes (1 to 4) at once |
-| R | restore settings. if `PrinterFix.backup` exists next to the script, you can restore the exact settings from before the first fix. otherwise, or if you choose to, restore Windows defaults: remove the registry changes from 1, 5 and 6, disable the sharing and discovery firewall rules, set networks back to public, reset service startup types, and optionally remove printers from 7 and credentials from 8 |
+| R | restore settings. if `printer-laknat.backup` exists next to the script, you can restore the exact settings from before the first fix. otherwise, or if you choose to, restore Windows defaults: remove the registry changes from 1, 5 and 6, disable the sharing and discovery firewall rules, set networks back to public, reset service startup types, and optionally remove printers from 7 and credentials from 8 |
 | 0 | exit |
 
 ## notes
