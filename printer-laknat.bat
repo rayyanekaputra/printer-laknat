@@ -37,6 +37,12 @@ echo   PRINTER LAKNAT  (Windows 10 / 11)
 echo   by IT Indoguna Makassar with Sonnet 5.5
 echo ==========================================================
 echo.
+echo  COMMON FIXES  (pick this PC's role)
+echo   [C1] Windows 10 as SERVER  (shares the printer)         (1 + 2 + 3 + 4 + firewall RPC)
+echo   [C2] Windows 10 as CLIENT  (connects to shared printer) (2 + 3 + 4 + 8, optional 5 / 6)
+echo   [C3] Windows 11 as SERVER  (shares the printer)         (1 + 2 + 3 + 4 + firewall RPC)
+echo   [C4] Windows 11 as CLIENT  (connects to shared printer) (B + 2 + 3 + 4 + 8, optional 6)
+echo.
 echo  FIXES  (each one explains itself and asks before applying)
 echo   [1] Fix 0x0000011b  (RPC privacy auth level)
 echo   [2] Reset Print Spooler + clear stuck jobs
@@ -47,12 +53,6 @@ echo   [6] Relax Point and Print driver restrictions (0x00000bcb / 0x0000007c)
 echo   [7] Add shared printer via local port (fallback, bypasses RPC)
 echo   [8] Store network credentials for a host (cmdkey)
 echo   [B] Fix 0x00000079 / 0x00000709 on Win11 22H2+ clients (RPC over named pipes)
-echo.
-echo  COMMON FIXES  (pick this PC's role)
-echo   [C1] Windows 10 as SERVER  (shares the printer)         (1 + 2 + 3 + 4 + firewall RPC)
-echo   [C2] Windows 10 as CLIENT  (connects to shared printer) (2 + 3 + 4 + 8, optional 5 / 6)
-echo   [C3] Windows 11 as SERVER  (shares the printer)         (1 + 2 + 3 + 4 + firewall RPC)
-echo   [C4] Windows 11 as CLIENT  (connects to shared printer) (B + 2 + 3 + 4 + 8, optional 6)
 echo.
 echo   [9] Diagnostics   [R] Restore settings   [0] Exit
 echo.
