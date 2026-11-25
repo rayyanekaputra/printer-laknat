@@ -9,6 +9,8 @@ A single menu-driven Windows batch script, `printer-laknat.bat`, that fixes shar
 Files:
 - `printer-laknat.bat`: the whole tool
 - `README.md` (English) and `README.id.md` (Bahasa Indonesia): user docs, kept in sync
+- `printer-laknat.sh`: linux companion, read-only diagnostics of a windows host (smbclient / rpcclient / nmap). Never changes the windows PC. Docs in `linux_readme.md` / `linux_readme.id.md`, kept in sync
+- `backlog.md`: planned work (linux to windows printing via CUPS `smb://`)
 - `.gitignore`: ignores `printer-laknat.backup/` and `printer-laknat.reports/`, which the script creates next to itself on the target PC
 
 ## Script layout (top to bottom)
@@ -49,6 +51,7 @@ If you change a preset, update the menu label, the preset label in the script an
 
 ## Conventions
 
+- `printer-laknat.sh` uses **LF** line endings, ASCII only, bash. Keep its error-code table in sync with the `.bat` one. Check with `bash -n` (shellcheck is not installed here)
 - `printer-laknat.bat` uses **CRLF** line endings and **ASCII only**. After editing on Linux, run `sed -i 's/\r\?$/\r/' printer-laknat.bat`.
 - No lines starting with `:` in the PowerShell section, because cmd's `goto` would treat them as labels.
 - Escape `( )` inside `echo` lines that are within `if ( ... )` blocks as `^(` and `^)`.
@@ -57,6 +60,8 @@ If you change a preset, update the menu label, the preset label in the script an
 - Development happens on Linux with no PowerShell or Windows available, so the script can't be run here. Say so honestly, and ask the user to test on a spare Windows PC.
 
 ## Possible next steps
+
+- See `backlog.md`
 
 - Real-world test results from Win11 24H2 client to Win10 host (not yet confirmed)
 - Convert to a signed `.ps1` (mentioned in the README notes)
