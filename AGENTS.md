@@ -62,6 +62,5 @@ If you change a preset, update the menu label, the preset label in the script an
 ## Possible next steps
 
 - See `backlog.md`
-
 - Real-world test results from Win11 24H2 client to Win10 host (not yet confirmed)
 - Convert to a signed `.ps1` (mentioned in the README notes)
