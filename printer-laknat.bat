@@ -390,29 +390,45 @@ goto :eof
 
 :: ==========================================================
 :diag
+:: Read-only. Checks run in the PowerShell section at the end of this file.
+:: Reports are kept outside the backup folder so a restore doesn't delete them.
+set "RPTDIR=%~dp0printer-laknat.reports"
+if not exist "%RPTDIR%" mkdir "%RPTDIR%"
+set "STAMP="
+for /f %%D in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "STAMP=%%D"
+set "RPT=%RPTDIR%\diag-%COMPUTERNAME%-%STAMP%.txt"
 echo.
-echo ----- Spooler status -----
-sc query spooler | findstr /i "STATE"
+echo [*] Checking this PC...
+set "PL_MODE=local"
+call :ps > "%RPT%" 2>&1
+type "%RPT%"
 echo.
-echo ----- RPC privacy setting -----
-reg query "HKLM\SYSTEM\CurrentControlSet\Control\Print" /v RpcAuthnLevelPrivacyEnabled 2>nul || echo Not set (default)
+set "PL_HOST="
+set /p "PL_HOST=Target host/IP to test (the PC sharing the printer, blank to skip): "
+if not "%PL_HOST%"=="" (
+    echo [*] Testing %PL_HOST% ... this can take up to a minute.
+    set "PL_MODE=host"
+    call :ps > "%TEMP%\printer-laknat-diag.txt" 2>&1
+    type "%TEMP%\printer-laknat-diag.txt"
+    type "%TEMP%\printer-laknat-diag.txt" >> "%RPT%"
+    del "%TEMP%\printer-laknat-diag.txt" >nul 2>&1
+)
 echo.
-echo ----- SMB guest logon policy -----
-reg query "HKLM\SOFTWARE\Policies\Microsoft\Windows\LanmanWorkstation" /v AllowInsecureGuestAuth 2>nul || echo Not set (default)
+set "PL_CODE="
+set /p "PL_CODE=Error code you saw (e.g. 79 or 0x0000011b, blank to skip): "
+if not "%PL_CODE%"=="" (
+    set "PL_MODE=code"
+    call :ps > "%TEMP%\printer-laknat-diag.txt" 2>&1
+    type "%TEMP%\printer-laknat-diag.txt"
+    type "%TEMP%\printer-laknat-diag.txt" >> "%RPT%"
+    del "%TEMP%\printer-laknat-diag.txt" >nul 2>&1
+)
 echo.
-echo ----- Point and Print policy -----
-reg query "HKLM\SOFTWARE\Policies\Microsoft\Windows NT\Printers\PointAndPrint" 2>nul || echo Not set (default)
-echo.
-echo ----- Network profile -----
-powershell -NoProfile -Command "Get-NetConnectionProfile | Format-Table Name,NetworkCategory -AutoSize"
-echo ----- Installed printers -----
-powershell -NoProfile -Command "Get-Printer | Format-Table Name,DriverName,PortName,Shared -AutoSize"
-echo ----- Stored credentials -----
-cmdkey /list | findstr /i "Target"
-echo.
-set "T="
-set /p "T=Host/IP to test SMB (port 445) - leave blank to skip: "
-if not "%T%"=="" powershell -NoProfile -Command "Test-NetConnection -ComputerName '%T%' -Port 445 | Format-List ComputerName,RemoteAddress,TcpTestSucceeded"
+echo [+] Report saved: %RPT%
+goto :eof
+
+:ps
+powershell -NoProfile -ExecutionPolicy Bypass -Command "iex (((Get-Content -Raw -LiteralPath $env:PL_SELF) -split ('#'+'PSDIAG'+'#'))[1])"
 goto :eof
 
 
@@ -522,3 +538,103 @@ set "CH="
 set /p "CH=Host to delete credential for (blank to skip): "
 if not "%CH%"=="" cmdkey /delete:%CH%
 goto :eof
+
+exit /b
+#PSDIAG#
+# ---- Diagnostics (PowerShell). Run by :ps with PL_MODE = local / host / code.
+function S($st, $msg, $fix) {
+    $t = switch ($st) { 'ok' { '[OK]' } 'bad' { '[!!]' } default { '[--]' } }
+    if ($fix) { "$t $msg   -> $fix" } else { "$t $msg" }
+}
+function RV($p, $n) { (Get-ItemProperty -Path $p -Name $n -ErrorAction SilentlyContinue).$n }
+$mode = $env:PL_MODE
+
+if ($mode -eq 'local') {
+    $cv = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
+    $b = [int]$cv.CurrentBuild
+    $w11 = $b -ge 22000
+    $os = if ($w11) { 'Windows 11' } else { 'Windows 10' }
+    "===== Printer Laknat diagnostics  $(Get-Date -Format 'yyyy-MM-dd HH:mm') ====="
+    ""
+    "----- This PC -----"
+    "$env:COMPUTERNAME : $os $($cv.DisplayVersion) (build $b)"
+    if ($w11) { "Suggested preset: C4 if this PC is a client, C3 if it shares the printer" }
+    else      { "Suggested preset: C2 if this PC is a client, C1 if it shares the printer" }
+    ""
+    "----- Local checks -----"
+    $sp = Get-Service Spooler
+    if ($sp.Status -eq 'Running') { S ok "Spooler running ($($sp.StartType))" } else { S bad "Spooler $($sp.Status)" 'option 2' }
+    foreach ($n in 'LanmanServer', 'LanmanWorkstation', 'FDResPub') {
+        $x = Get-Service $n -ErrorAction SilentlyContinue
+        if ($x.Status -eq 'Running') { S ok "$n running" } else { S bad "$n $($x.Status)" 'option 4' }
+    }
+    $pub = @(Get-NetConnectionProfile | Where-Object NetworkCategory -eq 'Public')
+    if ($pub.Count) { S bad "Network profile Public: $($pub.Name -join ', ')" 'option 3' } else { S ok 'Network profile not Public' }
+    $fw = @(Get-NetFirewallRule -DisplayGroup 'File and Printer Sharing' -ErrorAction SilentlyContinue | Where-Object Enabled -eq 'True')
+    if ($fw.Count) { S ok "File and Printer Sharing rules enabled ($($fw.Count))" } else { S bad 'File and Printer Sharing rules disabled' 'option 3' }
+    $rpc = @($fw | Where-Object { $_.DisplayName -match 'RPC' })
+    if ($rpc.Count) { S ok 'Printer RPC firewall rules enabled' } else { S na 'Printer RPC firewall rules off (matters on a server)' 'firewall RPC step in C1/C3' }
+    $v = RV 'HKLM:\SYSTEM\CurrentControlSet\Control\Print' 'RpcAuthnLevelPrivacyEnabled'
+    if ($v -eq 0) { S ok 'RpcAuthnLevelPrivacyEnabled = 0' } else { S na 'RpcAuthnLevelPrivacyEnabled default (encrypted RPC required)' 'option 1 if this is the server and clients get 0x11b' }
+    $v = RV 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Printers\RPC' 'RpcUseNamedPipeProtocol'
+    if ($v -eq 1) { S ok 'Client uses RPC over named pipes (RpcUseNamedPipeProtocol = 1)' }
+    elseif ($b -ge 22621) { S bad 'Client uses RPC over TCP (Win11 22H2+ default)' 'option B if you get 0x79 / 0x709 / 0xbc4' }
+    else { S ok 'Client uses RPC over named pipes (pre-22H2 default)' }
+    $sig = RV 'HKLM:\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters' 'RequireSecuritySignature'
+    if ($sig -eq 1 -or ($null -eq $sig -and $b -ge 26100)) { S bad 'SMB signing required: guest logons will fail' 'use option 8, not 5' } else { S ok 'SMB signing not required' }
+    $g = RV 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\LanmanWorkstation' 'AllowInsecureGuestAuth'
+    if ($g -eq 1) { S na 'Insecure guest logons allowed (option 5 applied)' } else { S na 'Insecure guest logons: default (blocked)' }
+    $pp = RV 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Printers\PointAndPrint' 'RestrictDriverInstallationToAdministrators'
+    if ($pp -eq 0) { S na 'Point and Print relaxed (option 6 applied)' } else { S na 'Point and Print: default (admins only)' }
+    $sh = @(Get-Printer -ErrorAction SilentlyContinue | Where-Object Shared)
+    if ($sh.Count) { S ok "Shared from this PC: $(($sh | ForEach-Object { $_.Name + ' [' + $_.ShareName + ']' }) -join ', ')" }
+    else { S na 'No printers shared from this PC (fine on a client)' }
+    ""
+    "----- Installed printers -----"
+    Get-Printer | Format-Table Name, DriverName, PortName, Shared -AutoSize | Out-String -Width 200
+    "----- Stored credentials -----"
+    cmdkey /list | Select-String 'Target'
+}
+
+if ($mode -eq 'host') {
+    $h = $env:PL_HOST
+    ""
+    "----- Target host: $h -----"
+    if (Test-Connection $h -Count 2 -Quiet -ErrorAction SilentlyContinue) { S ok "Ping $h" }
+    else { S na "Ping $h failed (ICMP may be blocked, continuing)" }
+    $t = Test-NetConnection $h -Port 445 -WarningAction SilentlyContinue
+    if (-not $t.RemoteAddress) { S bad "Cannot resolve $h" 'check the name or use the IP'; return }
+    if ($t.TcpTestSucceeded) { S ok "SMB port 445 open ($($t.RemoteAddress))" }
+    else { S bad 'SMB port 445 closed: nothing else can work' 'run C1/C3 on the host (option 3 + 4)'; return }
+    $r = Test-NetConnection $h -Port 135 -WarningAction SilentlyContinue
+    if ($r.TcpTestSucceeded) { S ok 'RPC port 135 open' }
+    else { S bad 'RPC port 135 closed: Win11 clients (RPC over TCP) will time out' 'C1/C3 on the host, or option B on this client' }
+    $nv = net view "\\$h" 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        $pr = @($nv | Where-Object { $_ -match '\s(Print|Printer|Drucker|Imprimante)\s' })
+        if ($pr.Count) { S ok 'Printer shares visible:'; $pr | ForEach-Object { "       $_" } }
+        else { S bad 'Host answers but shares no printer' 'share it on the host: Printer properties > Sharing' }
+    }
+    else { S bad "Cannot list shares: $((($nv | Out-String).Trim() -split "`n")[0])" 'option 8 with a host account (or 5 on Win10)' }
+    if (cmdkey /list | Select-String -SimpleMatch $h) { S ok "Credential stored for $h" } else { S na "No stored credential for $h" 'option 8' }
+}
+
+if ($mode -eq 'code') {
+    $c = ($env:PL_CODE.Trim().ToLower() -replace '^0x', '') -replace '^0+', ''
+    $m = @{
+        '11b' = 'RPC privacy level mismatch. Option 1 on the SERVER (C1/C3). Fallback: option 7.'
+        '709' = 'Cannot connect to / set the printer. Win11 22H2+ client: option B. Also option 1 on the server, try the IP instead of the name, or option 7.'
+        '79'  = 'Timeout: Win11 22H2+ client using RPC over TCP. Option B on the client, then option 8. Server: firewall RPC step (C1/C3). Fallback: option 7.'
+        'bc4' = 'No printers found: Win11 22H2 RPC over TCP. Option B on the client.'
+        '6d1' = 'Procedure not found (RPC). Option B on the client.'
+        'bcb' = 'Driver install blocked by Point and Print. Option 6 on the client, or install the driver locally and use option 7.'
+        '7c'  = 'Driver install blocked or wrong driver. Option 6, or option 7 with a local driver.'
+        '5'   = 'Access denied. Option 8 with an account that exists on the host; check share permissions.'
+        '35'  = 'Network path not found. Options 3 + 4 on both PCs; run the target host test.'
+        '43'  = 'Network name not found. Check the share name; option 3 on the host.'
+        '3e3' = 'Operation aborted. Option 2 on both PCs, then option 6.'
+    }
+    ""
+    if ($m.ContainsKey($c)) { "----- 0x$($c.PadLeft(8, '0')) -----"; $m[$c] }
+    else { "No entry for '$env:PL_CODE'. Known: 11b, 709, 79, bc4, 6d1, bcb, 7c, 5, 35, 43, 3e3. Run the target host test." }
+}
